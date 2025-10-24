@@ -75,6 +75,80 @@ function setupToggleListeners(): void {
     
     chrome.storage.local.set({ mode: (e.target as HTMLInputElement).checked ? 'organization' : 'personal' });
   });
+  
+  // AI Detection toggle
+  const aiDetectionToggle = document.getElementById('aiDetectionToggle') as HTMLInputElement;
+  const aiSettings = document.getElementById('aiSettings')!;
+  
+  aiDetectionToggle.addEventListener('change', async (e: Event) => {
+    const enabled = (e.target as HTMLInputElement).checked;
+    await chrome.storage.local.set({ aiDetectionEnabled: enabled });
+    aiSettings.style.display = enabled ? 'block' : 'none';
+  });
+
+  // AI Provider selection
+  const aiProviderSelect = document.getElementById('aiProviderSelect') as HTMLSelectElement;
+  const customProviderSettings = document.getElementById('customProviderSettings')!;
+  const providerHelpText = document.getElementById('providerHelpText')!;
+  const modelHelpText = document.getElementById('modelHelpText')!;
+
+  const providerInfo: Record<string, { help: string; model: string; link: string }> = {
+    builtin: {
+      help: 'Using our built-in AI service. No configuration needed!',
+      model: 'Default model: GPT-4o',
+      link: ''
+    },
+    github: {
+      help: 'Get your token at: <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>',
+      model: 'Default: gpt-4o, or try: gpt-4o-mini',
+      link: 'https://github.com/settings/tokens'
+    },
+    openai: {
+      help: 'Get your API key at: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a>',
+      model: 'Default: gpt-4o, or try: gpt-4o-mini, gpt-3.5-turbo',
+      link: 'https://platform.openai.com/api-keys'
+    },
+    anthropic: {
+      help: 'Get your API key at: <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>',
+      model: 'Default: claude-3-5-sonnet-20241022, or try: claude-3-5-haiku-20241022',
+      link: 'https://console.anthropic.com/settings/keys'
+    },
+    gemini: {
+      help: 'Get your API key at: <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>',
+      model: 'Default: gemini-1.5-pro, or try: gemini-1.5-flash',
+      link: 'https://makersuite.google.com/app/apikey'
+    },
+    groq: {
+      help: 'Get your API key at: <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> (Free & Fast!)',
+      model: 'Default: llama-3.3-70b-versatile, or try: mixtral-8x7b-32768',
+      link: 'https://console.groq.com/keys'
+    }
+  };
+
+  aiProviderSelect.addEventListener('change', (e: Event) => {
+    const provider = (e.target as HTMLSelectElement).value;
+    
+    if (provider === 'builtin') {
+      customProviderSettings.style.display = 'none';
+    } else {
+      customProviderSettings.style.display = 'block';
+      const info = providerInfo[provider];
+      providerHelpText.innerHTML = info.help;
+      modelHelpText.textContent = info.model;
+    }
+  });
+
+  // Save AI Configuration
+  const saveAiConfigBtn = document.getElementById('saveAiConfigBtn')!;
+  saveAiConfigBtn.addEventListener('click', async () => {
+    await saveAIConfiguration();
+  });
+
+  // Test AI Connection
+  const testAiConnectionBtn = document.getElementById('testAiConnectionBtn')!;
+  testAiConnectionBtn.addEventListener('click', async () => {
+    await testAIConnection();
+  });
 }
 
 // Form Listeners
@@ -147,24 +221,108 @@ function setupFormListeners(): void {
     input.value = '';
   });
   
+  // Save GitHub token for AI
+  document.getElementById('saveGithubTokenBtn')!.addEventListener('click', async () => {
+    const tokenInput = document.getElementById('githubTokenInput') as HTMLInputElement;
+    const token = tokenInput.value.trim();
+    const statusDiv = document.getElementById('aiStatus')!;
+    
+    if (!token) {
+      statusDiv.textContent = '❌ Please enter a valid GitHub token';
+      statusDiv.style.background = '#fee';
+      statusDiv.style.color = '#c00';
+      return;
+    }
+    
+    // Save token securely
+    await chrome.storage.local.set({ githubToken: token });
+    
+    // Notify background script to initialize AI
+    chrome.runtime.sendMessage({ 
+      action: 'updateAIConfig', 
+      enabled: true,
+      token 
+    }, (response) => {
+      if (response && response.success) {
+        statusDiv.textContent = '✅ AI Detection enabled successfully!';
+        statusDiv.style.background = '#efe';
+        statusDiv.style.color = '#060';
+        tokenInput.value = '';
+      } else {
+        statusDiv.textContent = '❌ Failed to initialize AI. Check your token.';
+        statusDiv.style.background = '#fee';
+        statusDiv.style.color = '#c00';
+      }
+    });
+  });
+  
   // Save organization config
   document.getElementById('saveOrgConfigBtn')!.addEventListener('click', async () => {
     const orgName = (document.getElementById('orgName') as HTMLInputElement).value.trim();
     const orgAdminEmail = (document.getElementById('orgAdminEmail') as HTMLInputElement).value.trim();
     const orgPolicyUrl = (document.getElementById('orgPolicyUrl') as HTMLInputElement).value.trim();
     
+    // Validate inputs
+    if (!orgName) {
+      showNotification('Organization name is required', 'error');
+      return;
+    }
+    
+    if (!orgAdminEmail || !isValidEmail(orgAdminEmail)) {
+      showNotification('Valid admin email is required', 'error');
+      return;
+    }
+    
+    if (orgPolicyUrl && !isValidUrl(orgPolicyUrl)) {
+      showNotification('Invalid policy URL format', 'error');
+      return;
+    }
+    
     const organizationConfig = {
       name: orgName,
       adminEmail: orgAdminEmail,
-      policyUrl: orgPolicyUrl,
-      updatedAt: Date.now()
+      policyUrl: orgPolicyUrl
     };
     
     await chrome.storage.local.set({ organizationConfig });
     
-    // Show success message
-    showNotification('Organization configuration saved', 'success');
+    // Fetch policies immediately if URL provided
+    if (orgPolicyUrl) {
+      showNotification('Fetching organization policies...', 'success');
+      
+      try {
+        const response = await chrome.runtime.sendMessage({
+          action: 'fetchOrganizationPolicies',
+          policyUrl: orgPolicyUrl
+        });
+        
+        if (response && response.success) {
+          showNotification('Organization configuration saved and policies loaded!', 'success');
+        } else {
+          showNotification(`Configuration saved but policy fetch failed: ${response?.error || 'Unknown error'}`, 'error');
+        }
+      } catch (error: any) {
+        showNotification(`Configuration saved but policy fetch failed: ${error.message}`, 'error');
+      }
+    } else {
+      showNotification('Organization configuration saved', 'success');
+    }
   });
+}
+
+// Validation helper functions
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function isValidUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 // Action Listeners
@@ -198,12 +356,51 @@ async function loadSettings(): Promise<void> {
     'expectedLinkDomains',
     'whitelistedSenders',
     'whitelistedDomains',
-    'organizationConfig'
+    'organizationConfig',
+    'aiDetectionEnabled',
+    'aiProvider',
+    'aiApiKey',
+    'aiModel'
   ]);
   
   // Update UI
   (document.getElementById('enabledToggle') as HTMLInputElement).checked = data.enabled !== false;
   (document.getElementById('privacyMode') as HTMLSelectElement).value = data.privacyMode || 'local';
+  
+  // AI Detection settings
+  const aiToggle = document.getElementById('aiDetectionToggle') as HTMLInputElement;
+  const aiSettings = document.getElementById('aiSettings')!;
+  const aiProviderSelect = document.getElementById('aiProviderSelect') as HTMLSelectElement;
+  const customProviderSettings = document.getElementById('customProviderSettings')!;
+  const aiApiKeyInput = document.getElementById('aiApiKeyInput') as HTMLInputElement;
+  const aiModelInput = document.getElementById('aiModelInput') as HTMLInputElement;
+  
+  aiToggle.checked = data.aiDetectionEnabled || false;
+  aiSettings.style.display = data.aiDetectionEnabled ? 'block' : 'none';
+  
+  // Load AI provider configuration
+  const provider = data.aiProvider || 'builtin';
+  aiProviderSelect.value = provider;
+  
+  if (provider !== 'builtin') {
+    customProviderSettings.style.display = 'block';
+    if (data.aiApiKey) {
+      aiApiKeyInput.value = '••••••••••••••••'; // Mask the key
+    }
+    if (data.aiModel) {
+      aiModelInput.value = data.aiModel;
+    }
+    
+    // Show configured status
+    if (data.aiApiKey) {
+      showAIStatus('success', `✅ ${provider.toUpperCase()} configured`);
+    }
+  } else {
+    customProviderSettings.style.display = 'none';
+    if (data.aiDetectionEnabled) {
+      showAIStatus('success', '✅ Using built-in AI');
+    }
+  }
   
   updateStatus(data.enabled !== false);
   
@@ -223,8 +420,32 @@ async function loadSettings(): Promise<void> {
       (document.getElementById('orgName') as HTMLInputElement).value = data.organizationConfig.name || '';
       (document.getElementById('orgAdminEmail') as HTMLInputElement).value = data.organizationConfig.adminEmail || '';
       (document.getElementById('orgPolicyUrl') as HTMLInputElement).value = data.organizationConfig.policyUrl || '';
+      
+      // Show policy fetch status
+      if (data.organizationConfig.lastPolicyFetch) {
+        const lastFetch = new Date(data.organizationConfig.lastPolicyFetch);
+        console.log(`Last policy fetch: ${lastFetch.toLocaleString()}`);
+      }
+      
+      if (data.organizationConfig.policyFetchError) {
+        console.warn(`Policy fetch error: ${data.organizationConfig.policyFetchError}`);
+      }
     }
+    
+    // Load organization statistics
+    loadOrganizationStatistics(data);
   }
+}
+
+// Load organization statistics
+function loadOrganizationStatistics(data: any): void {
+  // For now, show individual user stats
+  // In a full implementation, this would aggregate from multiple users
+  const orgTotalUsers = 1; // Current user
+  const orgTotalAlerts = data.alertHistory?.length || 0;
+  
+  (document.getElementById('orgTotalUsers') as HTMLElement).textContent = orgTotalUsers.toString();
+  (document.getElementById('orgTotalAlerts') as HTMLElement).textContent = orgTotalAlerts.toString();
 }
 
 // Load Statistics
@@ -529,4 +750,121 @@ function showNotification(message: string, type: 'success' | 'error'): void {
   setTimeout(() => {
     notification.remove();
   }, 3000);
+}
+
+// AI Configuration Functions
+async function saveAIConfiguration(): Promise<void> {
+  const aiProviderSelect = document.getElementById('aiProviderSelect') as HTMLSelectElement;
+  const aiApiKeyInput = document.getElementById('aiApiKeyInput') as HTMLInputElement;
+  const aiModelInput = document.getElementById('aiModelInput') as HTMLInputElement;
+  const aiStatus = document.getElementById('aiStatus')!;
+
+  const provider = aiProviderSelect.value;
+  const apiKey = aiApiKeyInput.value.trim();
+  const model = aiModelInput.value.trim();
+
+  // Validate
+  if (provider !== 'builtin' && !apiKey) {
+    showAIStatus('error', '❌ Please enter an API key');
+    return;
+  }
+
+  try {
+    // Save configuration
+    const config = {
+      aiProvider: provider,
+      aiApiKey: provider === 'builtin' ? null : apiKey,
+      aiModel: model || null,
+      aiDetectionEnabled: true
+    };
+
+    await chrome.storage.local.set(config);
+
+    // Notify background script
+    const response = await chrome.runtime.sendMessage({
+      action: 'updateAIConfig',
+      provider: provider,
+      apiKey: provider === 'builtin' ? null : apiKey,
+      model: model || null,
+      enabled: true
+    });
+
+    if (response && response.success) {
+      showAIStatus('success', '✅ Configuration saved successfully!');
+      
+      // Clear sensitive input
+      if (provider !== 'builtin') {
+        aiApiKeyInput.value = '••••••••••••••••';
+      }
+    } else {
+      showAIStatus('error', `❌ ${response?.error || 'Failed to save configuration'}`);
+    }
+  } catch (error: any) {
+    showAIStatus('error', `❌ Error: ${error.message}`);
+  }
+}
+
+async function testAIConnection(): Promise<void> {
+  const aiProviderSelect = document.getElementById('aiProviderSelect') as HTMLSelectElement;
+  const aiApiKeyInput = document.getElementById('aiApiKeyInput') as HTMLInputElement;
+  const aiModelInput = document.getElementById('aiModelInput') as HTMLInputElement;
+
+  const provider = aiProviderSelect.value;
+  const apiKey = aiApiKeyInput.value.trim();
+  const model = aiModelInput.value.trim();
+
+  if (provider === 'builtin') {
+    showAIStatus('info', '🔌 Testing built-in AI connection...');
+  } else if (!apiKey || apiKey === '••••••••••••••••') {
+    showAIStatus('error', '❌ Please enter your API key first');
+    return;
+  } else {
+    showAIStatus('info', `🔌 Testing connection to ${provider}...`);
+  }
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'testAIConnection',
+      provider: provider,
+      apiKey: provider === 'builtin' ? null : apiKey,
+      model: model || null
+    });
+
+    if (response && response.success) {
+      showAIStatus('success', response.message || '✅ Connection successful!');
+    } else {
+      showAIStatus('error', response?.message || '❌ Connection failed');
+    }
+  } catch (error: any) {
+    showAIStatus('error', `❌ Connection error: ${error.message}`);
+  }
+}
+
+function showAIStatus(type: 'success' | 'error' | 'info', message: string): void {
+  const aiStatus = document.getElementById('aiStatus')!;
+  
+  aiStatus.style.display = 'block';
+  aiStatus.textContent = message;
+  
+  // Style based on type
+  if (type === 'success') {
+    aiStatus.style.background = '#d4edda';
+    aiStatus.style.color = '#155724';
+    aiStatus.style.border = '1px solid #c3e6cb';
+  } else if (type === 'error') {
+    aiStatus.style.background = '#f8d7da';
+    aiStatus.style.color = '#721c24';
+    aiStatus.style.border = '1px solid #f5c6cb';
+  } else {
+    aiStatus.style.background = '#d1ecf1';
+    aiStatus.style.color = '#0c5460';
+    aiStatus.style.border = '1px solid #bee5eb';
+  }
+
+  // Auto-hide after 5 seconds for success/info
+  if (type !== 'error') {
+    setTimeout(() => {
+      aiStatus.style.display = 'none';
+    }, 5000);
+  }
 }

@@ -58,6 +58,17 @@ export interface OrganizationConfig {
   name: string;
   adminEmail: string;
   policyUrl?: string;
+  lastPolicyFetch?: number;
+  policyFetchError?: string;
+}
+
+export interface OrganizationPolicy {
+  expectedSenders?: string[];
+  expectedLinkDomains?: Record<string, string[]>;
+  whitelistedSenders?: string[];
+  whitelistedDomains?: string[];
+  version?: string;
+  updatedAt?: number;
 }
 
 export interface Statistics {

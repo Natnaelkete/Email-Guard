@@ -450,11 +450,26 @@ body {
 .alerts-list {
   max-height: 300px;
   overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .alerts-list::-webkit-scrollbar {
-  width: 0px;
-  display: none;
+  width: 6px;
+}
+
+.alerts-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.alerts-list::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.5);
+  border-radius: 3px;
+}
+
+.alerts-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.7);
 }
 
 .alert-item {
@@ -465,6 +480,9 @@ body {
   font-size: 12px;
   position: relative;
   border: 1px solid;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .alert-item.high {
@@ -510,6 +528,9 @@ body {
   font-weight: 600;
   color: #e0e0e0;
   padding-right: 80px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: calc(100% - 80px);
 }
 
 .alert-time {
@@ -521,11 +542,18 @@ body {
   font-size: 11px;
   color: #999;
   margin-bottom: 6px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 .alert-message {
   color: #b0b0b0;
   line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .alert-view-hint {

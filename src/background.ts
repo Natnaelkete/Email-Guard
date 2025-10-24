@@ -1,6 +1,95 @@
 // Email Guard Background Service Worker
 // Handles storage, verification requests, and cross-tab communication
 
+import { initializeMultiAIDetector, getMultiAIDetector, type AIProvider } from './services/multi-ai-detector';
+import { BUILTIN_GITHUB_TOKEN, hasBuiltInToken, AI_CONFIG } from './config';
+
+// Initialize AI Detector
+let aiDetector: ReturnType<typeof initializeMultiAIDetector> | null = null;
+
+// Initialize AI on startup
+async function initializeAI() {
+  try {
+    const { aiDetectionEnabled, aiProvider, aiApiKey, aiModel } = await chrome.storage.local.get([
+      'aiDetectionEnabled',
+      'aiProvider',
+      'aiApiKey',
+      'aiModel'
+    ]);
+
+    if (!aiDetectionEnabled) {
+      console.log('ℹ️  AI Detection disabled by user');
+      return;
+    }
+
+    const provider = (aiProvider || 'builtin') as AIProvider | 'builtin';
+
+    // Use built-in AI if selected or no custom provider configured
+    if (provider === 'builtin' || !aiApiKey) {
+      if (hasBuiltInToken()) {
+        console.log('🤖 Initializing built-in AI (GitHub Models)...');
+        aiDetector = initializeMultiAIDetector({
+          enabled: true,
+          provider: 'github',
+          apiKey: BUILTIN_GITHUB_TOKEN,
+          model: aiModel || AI_CONFIG.model,
+          confidenceThreshold: AI_CONFIG.confidenceThreshold
+        });
+        console.log('✅ Built-in AI enabled');
+      } else {
+        console.log('⚠️  No built-in AI token available');
+      }
+    } else {
+      // Use custom provider
+      console.log(`🤖 Initializing AI with ${provider}...`);
+      aiDetector = initializeMultiAIDetector({
+        enabled: true,
+        provider: provider as AIProvider,
+        apiKey: aiApiKey,
+        model: aiModel || undefined,
+        confidenceThreshold: AI_CONFIG.confidenceThreshold
+      });
+      console.log(`✅ AI enabled with ${provider}`);
+    }
+  } catch (error) {
+    console.error('❌ Failed to initialize AI:', error);
+  }
+}
+
+// Setup automatic policy updates
+async function setupPolicyUpdates() {
+  // Create alarm for periodic policy fetching (every hour)
+  chrome.alarms.create('fetchOrganizationPolicies', {
+    periodInMinutes: 60
+  });
+  
+  // Fetch policies immediately if in organization mode
+  const { mode, organizationConfig } = await chrome.storage.local.get(['mode', 'organizationConfig']);
+  
+  if (mode === 'organization' && organizationConfig?.policyUrl) {
+    console.log('📋 Initial policy fetch for organization mode');
+    await fetchOrganizationPolicies(organizationConfig.policyUrl);
+  }
+}
+
+// Handle alarm events
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'fetchOrganizationPolicies') {
+    const { mode, organizationConfig } = await chrome.storage.local.get(['mode', 'organizationConfig']);
+    
+    if (mode === 'organization' && organizationConfig?.policyUrl) {
+      console.log('⏰ Periodic policy update triggered');
+      await fetchOrganizationPolicies(organizationConfig.policyUrl);
+    }
+  }
+});
+
+// Initialize AI on extension load
+initializeAI();
+
+// Setup automatic policy updates
+setupPolicyUpdates();
+
 // Initialize default settings on install
 chrome.runtime.onInstalled.addListener(async () => {
   const defaults = {
@@ -69,6 +158,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getSettings") {
     getSettings()
       .then((settings) => sendResponse({ success: true, settings }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === "updateAIConfig") {
+    handleAIConfigUpdate(request)
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === "testAIConnection") {
+    handleAIConnectionTest(request)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, message: error.message }));
+    return true;
+  }
+
+  if (request.action === "fetchOrganizationPolicies") {
+    fetchOrganizationPolicies(request.policyUrl)
+      .then((result) => sendResponse(result))
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
@@ -148,6 +258,45 @@ async function handleEmailVerification(emailData) {
       details: homographCheck.details,
       recommendation: "This may be a look-alike domain. Verify carefully.",
     });
+  }
+
+  // Check 7: AI-Powered Analysis (if available)
+  if (aiDetector && aiDetector.isAvailable() && !isWhitelisted) {
+    try {
+      console.log('🤖 Running AI analysis...');
+      const aiResult = await aiDetector.analyzeEmail({
+        sender: sender,
+        subject: subject || '',
+        body: emailData.body || '',
+        links: links || [],
+        replyTo: replyTo
+      });
+
+      if (aiResult && aiResult.isPhishing && aiResult.confidence >= AI_CONFIG.confidenceThreshold) {
+        alerts.push({
+          severity: aiResult.confidence > 0.85 ? 'high' : 'medium',
+          type: 'ai_phishing_detection',
+          message: `${aiResult.provider} detected potential phishing (${Math.round(aiResult.confidence * 100)}% confidence)`,
+          details: aiResult.reasons.join('; '),
+          recommendation: aiResult.recommendation,
+          aiAnalysis: {
+            confidence: aiResult.confidence,
+            threats: aiResult.detectedThreats,
+            provider: aiResult.provider
+          }
+        });
+        console.log(`⚠️  ${aiResult.provider} flagged as phishing:`, aiResult);
+      } else if (aiResult) {
+        console.log(`✅ ${aiResult.provider} analysis complete - no threats detected`);
+      }
+    } catch (error: any) {
+      console.error('AI analysis error:', error);
+      const errorMsg = aiDetector.getLastError();
+      if (errorMsg) {
+        console.error('Detailed error:', errorMsg);
+      }
+      // Continue with traditional checks even if AI fails
+    }
   }
 
   return {
@@ -471,6 +620,221 @@ async function updateStatistics(stats) {
   };
 
   await chrome.storage.local.set({ statistics: updated });
+}
+
+// Fetch organization policies from URL
+async function fetchOrganizationPolicies(policyUrl: string) {
+  try {
+    console.log(`📋 Fetching organization policies from: ${policyUrl}`);
+    
+    const response = await fetch(policyUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const policies = await response.json();
+    
+    // Validate policy structure
+    if (!validateOrganizationPolicy(policies)) {
+      throw new Error('Invalid policy format');
+    }
+    
+    // Apply policies to storage
+    const updates: any = {};
+    
+    if (policies.expectedSenders) {
+      updates.expectedSenders = policies.expectedSenders;
+    }
+    
+    if (policies.expectedLinkDomains) {
+      updates.expectedLinkDomains = policies.expectedLinkDomains;
+    }
+    
+    if (policies.whitelistedSenders) {
+      updates.whitelistedSenders = policies.whitelistedSenders;
+    }
+    
+    if (policies.whitelistedDomains) {
+      updates.whitelistedDomains = policies.whitelistedDomains;
+    }
+    
+    // Update organization config with fetch status
+    const { organizationConfig } = await chrome.storage.local.get('organizationConfig');
+    if (organizationConfig) {
+      organizationConfig.lastPolicyFetch = Date.now();
+      organizationConfig.policyFetchError = undefined;
+      updates.organizationConfig = organizationConfig;
+    }
+    
+    await chrome.storage.local.set(updates);
+    
+    console.log('✅ Organization policies applied successfully');
+    console.log('Policies:', {
+      expectedSenders: policies.expectedSenders?.length || 0,
+      expectedLinkDomains: Object.keys(policies.expectedLinkDomains || {}).length,
+      whitelistedSenders: policies.whitelistedSenders?.length || 0,
+      whitelistedDomains: policies.whitelistedDomains?.length || 0
+    });
+    
+    return {
+      success: true,
+      message: 'Policies loaded successfully',
+      policiesApplied: {
+        expectedSenders: policies.expectedSenders?.length || 0,
+        whitelistedSenders: policies.whitelistedSenders?.length || 0,
+        whitelistedDomains: policies.whitelistedDomains?.length || 0
+      }
+    };
+  } catch (error: any) {
+    console.error('❌ Failed to fetch organization policies:', error);
+    
+    // Update organization config with error
+    const { organizationConfig } = await chrome.storage.local.get('organizationConfig');
+    if (organizationConfig) {
+      organizationConfig.policyFetchError = error.message;
+      await chrome.storage.local.set({ organizationConfig });
+    }
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Validate organization policy structure
+function validateOrganizationPolicy(policy: any): boolean {
+  if (!policy || typeof policy !== 'object') {
+    return false;
+  }
+  
+  // At least one policy field should be present
+  const hasValidField = 
+    Array.isArray(policy.expectedSenders) ||
+    (policy.expectedLinkDomains && typeof policy.expectedLinkDomains === 'object') ||
+    Array.isArray(policy.whitelistedSenders) ||
+    Array.isArray(policy.whitelistedDomains);
+  
+  return hasValidField;
+}
+
+// Handle AI connection test
+async function handleAIConnectionTest(request) {
+  const { provider, apiKey, model } = request;
+  
+  try {
+    const selectedProvider = (provider || 'builtin') as AIProvider | 'builtin';
+    
+    // Test built-in AI
+    if (selectedProvider === 'builtin') {
+      if (hasBuiltInToken()) {
+        const testDetector = initializeMultiAIDetector({
+          enabled: true,
+          provider: 'github',
+          apiKey: BUILTIN_GITHUB_TOKEN,
+          model: model || AI_CONFIG.model,
+          confidenceThreshold: AI_CONFIG.confidenceThreshold
+        });
+        
+        const result = await testDetector.testConnection();
+        return result;
+      } else {
+        return {
+          success: false,
+          message: '❌ Built-in AI not available'
+        };
+      }
+    }
+    
+    // Test custom provider
+    if (!apiKey) {
+      return {
+        success: false,
+        message: '❌ API key required'
+      };
+    }
+    
+    const testDetector = initializeMultiAIDetector({
+      enabled: true,
+      provider: selectedProvider as AIProvider,
+      apiKey: apiKey,
+      model: model || undefined,
+      confidenceThreshold: AI_CONFIG.confidenceThreshold
+    });
+    
+    const result = await testDetector.testConnection();
+    return result;
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `❌ ${error.message}`
+    };
+  }
+}
+
+// Handle AI configuration updates from popup
+async function handleAIConfigUpdate(request) {
+  const { enabled, provider, apiKey, model } = request;
+  
+  try {
+    if (!enabled) {
+      // Disable AI
+      aiDetector = null;
+      await chrome.storage.local.set({ aiDetectionEnabled: false });
+      console.log('ℹ️  AI Detection disabled');
+      return;
+    }
+
+    const selectedProvider = (provider || 'builtin') as AIProvider | 'builtin';
+
+    // Use built-in AI if selected or no API key provided
+    if (selectedProvider === 'builtin' || !apiKey) {
+      if (hasBuiltInToken()) {
+        console.log('🤖 Switching to built-in AI...');
+        aiDetector = initializeMultiAIDetector({
+          enabled: true,
+          provider: 'github',
+          apiKey: BUILTIN_GITHUB_TOKEN,
+          model: model || AI_CONFIG.model,
+          confidenceThreshold: AI_CONFIG.confidenceThreshold
+        });
+        
+        await chrome.storage.local.set({
+          aiDetectionEnabled: true,
+          aiProvider: 'builtin',
+          aiApiKey: null,
+          aiModel: model || null
+        });
+        
+        console.log('✅ Built-in AI enabled');
+      } else {
+        throw new Error('Built-in AI not available');
+      }
+    } else {
+      // Use custom provider
+      console.log(`🤖 Configuring ${selectedProvider}...`);
+      aiDetector = initializeMultiAIDetector({
+        enabled: true,
+        provider: selectedProvider as AIProvider,
+        apiKey: apiKey,
+        model: model || undefined,
+        confidenceThreshold: AI_CONFIG.confidenceThreshold
+      });
+      
+      await chrome.storage.local.set({
+        aiDetectionEnabled: true,
+        aiProvider: selectedProvider,
+        aiApiKey: apiKey,
+        aiModel: model || null
+      });
+      
+      console.log(`✅ AI enabled with ${selectedProvider}`);
+    }
+  } catch (error: any) {
+    console.error('Failed to update AI config:', error);
+    throw error;
+  }
 }
 
 // Get all settings

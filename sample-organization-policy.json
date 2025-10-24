@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "updatedAt": 1729771200000,
+  "expectedSenders": [
+    "payroll@company.com",
+    "hr@company.com",
+    "it@company.com",
+    "security@company.com"
+  ],
+  "expectedLinkDomains": {
+    "payroll@company.com": ["company.com", "adp.com", "paychex.com"],
+    "hr@company.com": ["company.com", "workday.com", "bamboohr.com"],
+    "it@company.com": ["company.com", "microsoft.com", "google.com"],
+    "security@company.com": ["company.com", "okta.com"]
+  },
+  "whitelistedSenders": [
+    "noreply@github.com",
+    "notifications@slack.com",
+    "no-reply@accounts.google.com",
+    "noreply@microsoft.com"
+  ],
+  "whitelistedDomains": [
+    "company.com",
+    "company-corp.com"
+  ]
+}

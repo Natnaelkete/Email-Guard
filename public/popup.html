@@ -72,6 +72,67 @@
       <!-- Settings Tab -->
       <div class="tab-panel" id="settings">
         <div class="section">
+          <h3>🤖 AI-Powered Detection</h3>
+          <div class="toggle-group">
+            <label class="toggle">
+              <input type="checkbox" id="aiDetectionToggle">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Enable AI Analysis</span>
+            </label>
+          </div>
+          <p class="help-text">Intelligent phishing detection using AI. Built-in AI available or use your own provider.</p>
+          
+          <div id="aiSettings" style="display: none; margin-top: 15px;">
+            <!-- AI Provider Selection -->
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 13px;">AI Provider</label>
+              <select id="aiProviderSelect" class="select" style="width: 100%;">
+                <option value="builtin">Built-in AI (Default)</option>
+                <option value="github">GitHub Models</option>
+                <option value="openai">OpenAI (GPT-4)</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="groq">Groq (Fast & Free)</option>
+              </select>
+              <p class="help-text" style="font-size: 11px; margin-top: 5px;">
+                Select "Built-in AI" to use our service, or choose your own provider.
+              </p>
+            </div>
+
+            <!-- Custom Provider Settings -->
+            <div id="customProviderSettings" style="display: none;">
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 13px;">API Key / Token</label>
+                <input type="password" id="aiApiKeyInput" placeholder="Enter your API key" class="input" style="width: 100%; margin-bottom: 5px;">
+                <p class="help-text" style="font-size: 11px; margin: 0;" id="providerHelpText">
+                  Get your API key from the provider's website.
+                </p>
+              </div>
+
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 13px;">Model (Optional)</label>
+                <input type="text" id="aiModelInput" placeholder="Leave empty for default" class="input" style="width: 100%;">
+                <p class="help-text" style="font-size: 11px; margin-top: 5px;" id="modelHelpText">
+                  Default model will be used if left empty.
+                </p>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" id="saveAiConfigBtn" style="flex: 1;">
+                  💾 Save Configuration
+                </button>
+                <button class="btn" id="testAiConnectionBtn" style="flex: 1;">
+                  🔌 Test Connection
+                </button>
+              </div>
+            </div>
+
+            <!-- Status Display -->
+            <div id="aiStatus" style="margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 12px; display: none;"></div>
+          </div>
+        </div>
+
+        <div class="section">
           <h3>Privacy Mode</h3>
           <select id="privacyMode" class="select">
             <option value="local">Local Only (Privacy First)</option>
