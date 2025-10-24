@@ -1,6 +1,23 @@
 // Email Guard Popup Script
 
-document.addEventListener('DOMContentLoaded', async () => {
+// Type definitions (inline to avoid import issues)
+type AlertSeverity = 'low' | 'medium' | 'high';
+type AlertType = string;
+
+interface Alert {
+  severity: AlertSeverity;
+  type: AlertType;
+  message: string;
+  details: string;
+  recommendation: string;
+  sender?: string;
+  subject?: string;
+  timestamp?: number;
+  id?: string;
+  emailUrl?: string | null;
+}
+
+document.addEventListener('DOMContentLoaded', async (): Promise<void> => {
   // Initialize
   await loadSettings();
   await loadStatistics();
@@ -14,41 +31,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Tab Navigation
-function setupTabNavigation() {
+function setupTabNavigation(): void {
   const tabs = document.querySelectorAll('.tab');
   const panels = document.querySelectorAll('.tab-panel');
   
-  tabs.forEach(tab => {
+  tabs.forEach((tab: Element) => {
     tab.addEventListener('click', () => {
-      const targetTab = tab.dataset.tab;
+      const targetTab = (tab as HTMLElement).dataset.tab;
       
       // Update active tab
-      tabs.forEach(t => t.classList.remove('active'));
+      tabs.forEach((t: Element) => t.classList.remove('active'));
       tab.classList.add('active');
       
       // Update active panel
-      panels.forEach(p => p.classList.remove('active'));
-      document.getElementById(targetTab).classList.add('active');
+      panels.forEach((p: Element) => p.classList.remove('active'));
+      document.getElementById(targetTab!)!.classList.add('active');
     });
   });
 }
 
 // Toggle Listeners
-function setupToggleListeners() {
+function setupToggleListeners(): void {
   // Enable/Disable toggle
-  const enabledToggle = document.getElementById('enabledToggle');
-  enabledToggle.addEventListener('change', async (e) => {
-    await chrome.storage.local.set({ enabled: e.target.checked });
-    updateStatus(e.target.checked);
+  const enabledToggle = document.getElementById('enabledToggle') as HTMLInputElement;
+  enabledToggle.addEventListener('change', async (e: Event) => {
+    await chrome.storage.local.set({ enabled: (e.target as HTMLInputElement).checked });
+    updateStatus((e.target as HTMLInputElement).checked);
   });
   
   // Organization mode toggle
-  const orgModeToggle = document.getElementById('orgModeToggle');
-  orgModeToggle.addEventListener('change', (e) => {
-    const orgSettings = document.getElementById('orgSettings');
-    const orgStats = document.getElementById('orgStats');
+  const orgModeToggle = document.getElementById('orgModeToggle') as HTMLInputElement;
+  orgModeToggle.addEventListener('change', (e: Event) => {
+    const orgSettings = document.getElementById('orgSettings')!;
+    const orgStats = document.getElementById('orgStats')!;
     
-    if (e.target.checked) {
+    if ((e.target as HTMLInputElement).checked) {
       orgSettings.style.display = 'block';
       orgStats.style.display = 'block';
     } else {
@@ -56,21 +73,21 @@ function setupToggleListeners() {
       orgStats.style.display = 'none';
     }
     
-    chrome.storage.local.set({ mode: e.target.checked ? 'organization' : 'personal' });
+    chrome.storage.local.set({ mode: (e.target as HTMLInputElement).checked ? 'organization' : 'personal' });
   });
 }
 
 // Form Listeners
-function setupFormListeners() {
+function setupFormListeners(): void {
   // Privacy mode
-  const privacyMode = document.getElementById('privacyMode');
-  privacyMode.addEventListener('change', (e) => {
-    chrome.storage.local.set({ privacyMode: e.target.value });
+  const privacyMode = document.getElementById('privacyMode') as HTMLSelectElement;
+  privacyMode.addEventListener('change', (e: Event) => {
+    chrome.storage.local.set({ privacyMode: (e.target as HTMLSelectElement).value });
   });
   
   // Add expected sender
-  document.getElementById('addExpectedSenderBtn').addEventListener('click', async () => {
-    const input = document.getElementById('expectedSenderInput');
+  document.getElementById('addExpectedSenderBtn')!.addEventListener('click', async () => {
+    const input = document.getElementById('expectedSenderInput') as HTMLInputElement;
     const value = input.value.trim().toLowerCase();
     
     if (!value) return;
@@ -87,9 +104,9 @@ function setupFormListeners() {
   });
   
   // Add link domain
-  document.getElementById('addLinkDomainBtn').addEventListener('click', async () => {
-    const senderInput = document.getElementById('linkSenderInput');
-    const domainInput = document.getElementById('linkDomainInput');
+  document.getElementById('addLinkDomainBtn')!.addEventListener('click', async () => {
+    const senderInput = document.getElementById('linkSenderInput') as HTMLInputElement;
+    const domainInput = document.getElementById('linkDomainInput') as HTMLInputElement;
     
     const sender = senderInput.value.trim().toLowerCase();
     const domain = domainInput.value.trim().toLowerCase();
@@ -113,8 +130,8 @@ function setupFormListeners() {
   });
   
   // Add whitelisted domain
-  document.getElementById('addWhitelistedDomainBtn').addEventListener('click', async () => {
-    const input = document.getElementById('whitelistedDomainInput');
+  document.getElementById('addWhitelistedDomainBtn')!.addEventListener('click', async () => {
+    const input = document.getElementById('whitelistedDomainInput') as HTMLInputElement;
     const value = input.value.trim().toLowerCase();
     
     if (!value) return;
@@ -131,10 +148,10 @@ function setupFormListeners() {
   });
   
   // Save organization config
-  document.getElementById('saveOrgConfigBtn').addEventListener('click', async () => {
-    const orgName = document.getElementById('orgName').value.trim();
-    const orgAdminEmail = document.getElementById('orgAdminEmail').value.trim();
-    const orgPolicyUrl = document.getElementById('orgPolicyUrl').value.trim();
+  document.getElementById('saveOrgConfigBtn')!.addEventListener('click', async () => {
+    const orgName = (document.getElementById('orgName') as HTMLInputElement).value.trim();
+    const orgAdminEmail = (document.getElementById('orgAdminEmail') as HTMLInputElement).value.trim();
+    const orgPolicyUrl = (document.getElementById('orgPolicyUrl') as HTMLInputElement).value.trim();
     
     const organizationConfig = {
       name: orgName,
@@ -151,19 +168,19 @@ function setupFormListeners() {
 }
 
 // Action Listeners
-function setupActionListeners() {
+function setupActionListeners(): void {
   // View alerts
-  document.getElementById('viewAlertsBtn').addEventListener('click', () => {
-    document.querySelector('[data-tab="alerts"]').click();
+  document.getElementById('viewAlertsBtn')!.addEventListener('click', () => {
+    (document.querySelector('[data-tab="alerts"]') as HTMLElement).click();
   });
   
   // Export report
-  document.getElementById('exportReportBtn').addEventListener('click', async () => {
+  document.getElementById('exportReportBtn')!.addEventListener('click', async () => {
     await exportReport();
   });
   
   // Clear alerts
-  document.getElementById('clearAlertsBtn').addEventListener('click', async () => {
+  document.getElementById('clearAlertsBtn')!.addEventListener('click', async () => {
     if (confirm('Are you sure you want to clear all alerts?')) {
       await chrome.storage.local.set({ alertHistory: [] });
       renderAlerts([]);
@@ -172,7 +189,7 @@ function setupActionListeners() {
 }
 
 // Load Settings
-async function loadSettings() {
+async function loadSettings(): Promise<void> {
   const data = await chrome.storage.local.get([
     'enabled',
     'mode',
@@ -185,8 +202,8 @@ async function loadSettings() {
   ]);
   
   // Update UI
-  document.getElementById('enabledToggle').checked = data.enabled !== false;
-  document.getElementById('privacyMode').value = data.privacyMode || 'local';
+  (document.getElementById('enabledToggle') as HTMLInputElement).checked = data.enabled !== false;
+  (document.getElementById('privacyMode') as HTMLSelectElement).value = data.privacyMode || 'local';
   
   updateStatus(data.enabled !== false);
   
@@ -198,24 +215,24 @@ async function loadSettings() {
   
   // Organization mode
   if (data.mode === 'organization') {
-    document.getElementById('orgModeToggle').checked = true;
-    document.getElementById('orgSettings').style.display = 'block';
-    document.getElementById('orgStats').style.display = 'block';
+    (document.getElementById('orgModeToggle') as HTMLInputElement).checked = true;
+    document.getElementById('orgSettings')!.style.display = 'block';
+    document.getElementById('orgStats')!.style.display = 'block';
     
     if (data.organizationConfig) {
-      document.getElementById('orgName').value = data.organizationConfig.name || '';
-      document.getElementById('orgAdminEmail').value = data.organizationConfig.adminEmail || '';
-      document.getElementById('orgPolicyUrl').value = data.organizationConfig.policyUrl || '';
+      (document.getElementById('orgName') as HTMLInputElement).value = data.organizationConfig.name || '';
+      (document.getElementById('orgAdminEmail') as HTMLInputElement).value = data.organizationConfig.adminEmail || '';
+      (document.getElementById('orgPolicyUrl') as HTMLInputElement).value = data.organizationConfig.policyUrl || '';
     }
   }
 }
 
 // Load Statistics
-async function loadStatistics() {
+async function loadStatistics(): Promise<void> {
   const { statistics = {} } = await chrome.storage.local.get('statistics');
   
-  document.getElementById('emailsScanned').textContent = statistics.totalEmailsScanned || 0;
-  document.getElementById('threatsBlocked').textContent = statistics.threatsBlocked || 0;
+  document.getElementById('emailsScanned')!.textContent = String(statistics.totalEmailsScanned || 0);
+  document.getElementById('threatsBlocked')!.textContent = String(statistics.threatsBlocked || 0);
   
   // Load recent activity
   const { alertHistory = [] } = await chrome.storage.local.get('alertHistory');
@@ -223,14 +240,14 @@ async function loadStatistics() {
 }
 
 // Load Alerts
-async function loadAlerts() {
+async function loadAlerts(): Promise<void> {
   const { alertHistory = [] } = await chrome.storage.local.get('alertHistory');
   renderAlerts(alertHistory);
 }
 
 // Render Functions
-function renderExpectedSenders(senders) {
-  const container = document.getElementById('expectedSendersList');
+function renderExpectedSenders(senders: string[]): void {
+  const container = document.getElementById('expectedSendersList')!;
   container.innerHTML = '';
   
   if (senders.length === 0) {
@@ -241,7 +258,7 @@ function renderExpectedSenders(senders) {
   senders.forEach(sender => {
     const item = createListItem(sender, async () => {
       const { expectedSenders = [] } = await chrome.storage.local.get('expectedSenders');
-      const updated = expectedSenders.filter(s => s !== sender);
+      const updated = expectedSenders.filter((s: string) => s !== sender);
       await chrome.storage.local.set({ expectedSenders: updated });
       renderExpectedSenders(updated);
     });
@@ -249,8 +266,8 @@ function renderExpectedSenders(senders) {
   });
 }
 
-function renderLinkDomains(linkDomains) {
-  const container = document.getElementById('linkDomainsList');
+function renderLinkDomains(linkDomains: Record<string, string[]>): void {
+  const container = document.getElementById('linkDomainsList')!;
   container.innerHTML = '';
   
   const entries = Object.entries(linkDomains);
@@ -260,13 +277,13 @@ function renderLinkDomains(linkDomains) {
     return;
   }
   
-  entries.forEach(([sender, domains]) => {
-    domains.forEach(domain => {
+  entries.forEach(([sender, domains]: [string, string[]]) => {
+    domains.forEach((domain: string) => {
       const item = createListItem(
         `${sender} → ${domain}`,
         async () => {
           const { expectedLinkDomains = {} } = await chrome.storage.local.get('expectedLinkDomains');
-          expectedLinkDomains[sender] = expectedLinkDomains[sender].filter(d => d !== domain);
+          expectedLinkDomains[sender] = expectedLinkDomains[sender].filter((d: string) => d !== domain);
           if (expectedLinkDomains[sender].length === 0) {
             delete expectedLinkDomains[sender];
           }
@@ -279,8 +296,8 @@ function renderLinkDomains(linkDomains) {
   });
 }
 
-function renderWhitelistedSenders(senders) {
-  const container = document.getElementById('whitelistedSendersList');
+function renderWhitelistedSenders(senders: string[]): void {
+  const container = document.getElementById('whitelistedSendersList')!;
   container.innerHTML = '';
   
   if (senders.length === 0) {
@@ -288,10 +305,10 @@ function renderWhitelistedSenders(senders) {
     return;
   }
   
-  senders.forEach(sender => {
+  senders.forEach((sender: string) => {
     const item = createListItem(sender, async () => {
       const { whitelistedSenders = [] } = await chrome.storage.local.get('whitelistedSenders');
-      const updated = whitelistedSenders.filter(s => s !== sender);
+      const updated = whitelistedSenders.filter((s: string) => s !== sender);
       await chrome.storage.local.set({ whitelistedSenders: updated });
       renderWhitelistedSenders(updated);
     });
@@ -299,8 +316,8 @@ function renderWhitelistedSenders(senders) {
   });
 }
 
-function renderWhitelistedDomains(domains) {
-  const container = document.getElementById('whitelistedDomainsList');
+function renderWhitelistedDomains(domains: string[]): void {
+  const container = document.getElementById('whitelistedDomainsList')!;
   container.innerHTML = '';
   
   if (domains.length === 0) {
@@ -308,10 +325,10 @@ function renderWhitelistedDomains(domains) {
     return;
   }
   
-  domains.forEach(domain => {
+  domains.forEach((domain: string) => {
     const item = createListItem(domain, async () => {
       const { whitelistedDomains = [] } = await chrome.storage.local.get('whitelistedDomains');
-      const updated = whitelistedDomains.filter(d => d !== domain);
+      const updated = whitelistedDomains.filter((d: string) => d !== domain);
       await chrome.storage.local.set({ whitelistedDomains: updated });
       renderWhitelistedDomains(updated);
     });
@@ -319,8 +336,8 @@ function renderWhitelistedDomains(domains) {
   });
 }
 
-function renderRecentActivity(alerts) {
-  const container = document.getElementById('recentActivity');
+function renderRecentActivity(alerts: Alert[]): void {
+  const container = document.getElementById('recentActivity')!;
   container.innerHTML = '';
   
   if (alerts.length === 0) {
@@ -328,13 +345,13 @@ function renderRecentActivity(alerts) {
     return;
   }
   
-  alerts.forEach(alert => {
+  alerts.forEach((alert: Alert) => {
     const item = document.createElement('div');
     item.className = 'activity-item';
     
     const time = document.createElement('div');
     time.className = 'activity-time';
-    time.textContent = formatTime(alert.timestamp);
+    time.textContent = formatTime(alert.timestamp!);
     
     const message = document.createElement('div');
     message.className = 'activity-message';
@@ -346,8 +363,8 @@ function renderRecentActivity(alerts) {
   });
 }
 
-function renderAlerts(alerts) {
-  const container = document.getElementById('alertsList');
+function renderAlerts(alerts: Alert[]): void {
+  const container = document.getElementById('alertsList')!;
   container.innerHTML = '';
   
   if (alerts.length === 0) {
@@ -355,7 +372,7 @@ function renderAlerts(alerts) {
     return;
   }
   
-  alerts.forEach(alert => {
+  alerts.forEach((alert: Alert) => {
     const item = document.createElement('div');
     item.className = `alert-item ${alert.severity}`;
     
@@ -407,7 +424,7 @@ function renderAlerts(alerts) {
 }
 
 // Helper Functions
-function createListItem(text, onRemove) {
+function createListItem(text: string, onRemove: () => void): HTMLDivElement {
   const item = document.createElement('div');
   item.className = 'list-item';
   
@@ -426,9 +443,9 @@ function createListItem(text, onRemove) {
   return item;
 }
 
-function updateStatus(enabled) {
-  const indicator = document.getElementById('statusIndicator');
-  const text = document.getElementById('statusText');
+function updateStatus(enabled: boolean): void {
+  const indicator = document.getElementById('statusIndicator')!;
+  const text = document.getElementById('statusText')!;
   
   if (enabled) {
     indicator.classList.remove('inactive');
@@ -439,10 +456,10 @@ function updateStatus(enabled) {
   }
 }
 
-function formatTime(timestamp) {
+function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
   const now = new Date();
-  const diff = now - date;
+  const diff = now.getTime() - date.getTime();
   
   if (diff < 60000) return 'Just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
@@ -450,7 +467,7 @@ function formatTime(timestamp) {
   return date.toLocaleDateString();
 }
 
-async function exportReport() {
+async function exportReport(): Promise<void> {
   const data = await chrome.storage.local.get([
     'statistics',
     'alertHistory',
@@ -468,7 +485,7 @@ async function exportReport() {
   };
   
   // Analyze alerts
-  (data.alertHistory || []).forEach(alert => {
+  (data.alertHistory || []).forEach((alert: Alert) => {
     // By type
     report.alertsByType[alert.type] = (report.alertsByType[alert.type] || 0) + 1;
     
@@ -490,7 +507,7 @@ async function exportReport() {
   showNotification('Report exported successfully', 'success');
 }
 
-function showNotification(message, type) {
+function showNotification(message: string, type: 'success' | 'error'): void {
   // Create a simple notification element
   const notification = document.createElement('div');
   notification.style.cssText = `
