@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Guard</title>
+  <link rel="stylesheet" href="popup-styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="shield-icon">🛡️</span>
+        <h1>Email Guard</h1>
+      </div>
+      <div class="status">
+        <span class="status-indicator" id="statusIndicator"></span>
+        <span class="status-text" id="statusText">Active</span>
+      </div>
+    </header>
+
+    <!-- Statistics -->
+    <section class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="emailsScanned">0</div>
+        <div class="stat-label">Emails Scanned</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="threatsBlocked">0</div>
+        <div class="stat-label">Threats Blocked</div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="settings">Settings</button>
+      <button class="tab" data-tab="alerts">Alerts</button>
+      <button class="tab" data-tab="organization">Organization</button>
+    </nav>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Dashboard Tab -->
+      <div class="tab-panel active" id="dashboard">
+        <div class="section">
+          <h3>Protection Status</h3>
+          <div class="toggle-group">
+            <label class="toggle">
+              <input type="checkbox" id="enabledToggle" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Email Protection</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Recent Activity</h3>
+          <div id="recentActivity" class="activity-list">
+            <p class="empty-state">No recent activity</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Quick Actions</h3>
+          <button class="btn btn-secondary" id="viewAlertsBtn">View All Alerts</button>
+          <button class="btn btn-secondary" id="exportReportBtn">Export Report</button>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div class="tab-panel" id="settings">
+        <div class="section">
+          <h3>Privacy Mode</h3>
+          <select id="privacyMode" class="select">
+            <option value="local">Local Only (Privacy First)</option>
+            <option value="enhanced">Enhanced (External Checks)</option>
+          </select>
+          <p class="help-text">Local mode processes everything on your device. Enhanced mode performs additional domain verification checks.</p>
+        </div>
+
+        <div class="section">
+          <h3>Expected Senders</h3>
+          <p class="help-text">Add email addresses or domains you expect to receive emails from.</p>
+          <div class="input-group">
+            <input type="text" id="expectedSenderInput" placeholder="email@example.com or example.com" class="input">
+            <button class="btn btn-primary" id="addExpectedSenderBtn">Add</button>
+          </div>
+          <div id="expectedSendersList" class="list"></div>
+        </div>
+
+        <div class="section">
+          <h3>Expected Link Domains</h3>
+          <p class="help-text">Define which domains specific senders are allowed to link to.</p>
+          <div class="input-group">
+            <input type="text" id="linkSenderInput" placeholder="Sender email or domain" class="input">
+            <input type="text" id="linkDomainInput" placeholder="Allowed link domain" class="input">
+            <button class="btn btn-primary" id="addLinkDomainBtn">Add</button>
+          </div>
+          <div id="linkDomainsList" class="list"></div>
+        </div>
+
+        <div class="section">
+          <h3>Whitelisted Senders</h3>
+          <p class="help-text">Senders marked as safe will bypass all checks.</p>
+          <div id="whitelistedSendersList" class="list"></div>
+        </div>
+
+        <div class="section">
+          <h3>Whitelisted Domains</h3>
+          <p class="help-text">Trusted domains for links.</p>
+          <div class="input-group">
+            <input type="text" id="whitelistedDomainInput" placeholder="example.com" class="input">
+            <button class="btn btn-primary" id="addWhitelistedDomainBtn">Add</button>
+          </div>
+          <div id="whitelistedDomainsList" class="list"></div>
+        </div>
+      </div>
+
+      <!-- Alerts Tab -->
+      <div class="tab-panel" id="alerts">
+        <div class="section">
+          <div class="section-header">
+            <h3>Alert History</h3>
+            <button class="btn btn-secondary btn-sm" id="clearAlertsBtn">Clear All</button>
+          </div>
+          <div id="alertsList" class="alerts-list">
+            <p class="empty-state">No alerts recorded</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Organization Tab -->
+      <div class="tab-panel" id="organization">
+        <div class="section">
+          <h3>Organization Mode</h3>
+          <p class="help-text">Enable organization mode to manage settings centrally and view team-wide reports.</p>
+          
+          <div class="toggle-group">
+            <label class="toggle">
+              <input type="checkbox" id="orgModeToggle">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Enable Organization Mode</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="section" id="orgSettings" style="display: none;">
+          <h3>Organization Configuration</h3>
+          
+          <div class="form-group">
+            <label>Organization Name</label>
+            <input type="text" id="orgName" placeholder="My Company" class="input">
+          </div>
+
+          <div class="form-group">
+            <label>Admin Email</label>
+            <input type="email" id="orgAdminEmail" placeholder="admin@company.com" class="input">
+          </div>
+
+          <div class="form-group">
+            <label>Central Policy URL (Optional)</label>
+            <input type="url" id="orgPolicyUrl" placeholder="https://company.com/email-guard-policy.json" class="input">
+            <p class="help-text">URL to fetch centralized sender and domain policies.</p>
+          </div>
+
+          <button class="btn btn-primary" id="saveOrgConfigBtn">Save Configuration</button>
+        </div>
+
+        <div class="section" id="orgStats" style="display: none;">
+          <h3>Organization Statistics</h3>
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-value" id="orgTotalUsers">0</div>
+              <div class="stat-label">Active Users</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="orgTotalAlerts">0</div>
+              <div class="stat-label">Total Alerts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

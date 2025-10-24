@@ -1,0 +1,39 @@
+{
+  "name": "email-guard",
+  "version": "1.0.0",
+  "description": "Advanced Chrome extension for email protection against phishing and malicious attacks",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint *.js",
+    "format": "prettier --write \"**/*.{js,json,css,html,md}\"",
+    "build": "node build.js",
+    "package": "node package.js"
+  },
+  "keywords": [
+    "email",
+    "security",
+    "phishing",
+    "protection",
+    "chrome-extension",
+    "gmail",
+    "outlook",
+    "cybersecurity",
+    "malware-protection",
+    "link-verification"
+  ],
+  "author": "Email Guard Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/email-guard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/email-guard/issues"
+  },
+  "homepage": "https://github.com/yourusername/email-guard#readme",
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0"
+  }
+}

@@ -1,0 +1,185 @@
+/* Email Guard Styles */
+
+/* Alert Panel */
+.email-guard-alert {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.email-guard-high {
+  background-color: #fee;
+  border-left-color: #dc3545;
+}
+
+.email-guard-medium {
+  background-color: #fff3cd;
+  border-left-color: #ffc107;
+}
+
+.email-guard-low {
+  background-color: #d1ecf1;
+  border-left-color: #17a2b8;
+}
+
+/* Header */
+.email-guard-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.email-guard-icon {
+  font-size: 20px;
+}
+
+.email-guard-count {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Alerts List */
+.email-guard-alerts-list {
+  margin: 12px 0;
+}
+
+.email-guard-alert-item {
+  margin: 8px 0;
+}
+
+.email-guard-alert-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #333;
+}
+
+.email-guard-alert-details {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.email-guard-alert-recommendation {
+  font-size: 12px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.email-guard-alert-recommendation strong {
+  color: #000;
+}
+
+.email-guard-separator {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin: 12px 0;
+}
+
+/* Actions */
+.email-guard-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.email-guard-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.email-guard-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.email-guard-btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.email-guard-btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.email-guard-btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.email-guard-btn-secondary:hover {
+  background-color: #545b62;
+}
+
+/* Notification */
+.email-guard-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  opacity: 0;
+  transform: translateX(400px);
+  transition: all 0.3s ease-out;
+}
+
+.email-guard-notification-show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.email-guard-notification-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.email-guard-notification-error {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .email-guard-alert {
+    margin: 12px 0;
+    padding: 12px;
+  }
+  
+  .email-guard-actions {
+    flex-direction: column;
+  }
+  
+  .email-guard-btn {
+    width: 100%;
+  }
+}
