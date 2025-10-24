@@ -80,14 +80,16 @@
         if (result.alerts.length > 0) {
           displayAlerts(result.alerts, emailData);
           
-          // Log alerts
+          // Log alerts with email URL
+          const emailUrl = window.location.href;
           for (const alert of result.alerts) {
             chrome.runtime.sendMessage({
               action: 'logAlert',
               alert: {
                 ...alert,
                 sender: emailData.sender,
-                subject: emailData.subject
+                subject: emailData.subject,
+                emailUrl: emailUrl
               }
             });
           }

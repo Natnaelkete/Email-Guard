@@ -406,7 +406,8 @@ async function logAlert(alert) {
   const logEntry = {
     ...alert,
     timestamp: Date.now(),
-    id: generateId()
+    id: generateId(),
+    emailUrl: alert.emailUrl || null // Store email URL for navigation
   };
   
   alertHistory.unshift(logEntry);

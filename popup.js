@@ -359,6 +359,23 @@ function renderAlerts(alerts) {
     const item = document.createElement('div');
     item.className = `alert-item ${alert.severity}`;
     
+    // Always make alert clickable
+    item.classList.add('clickable');
+    item.style.cursor = 'pointer';
+    
+    // Add click handler
+    item.addEventListener('click', () => {
+      if (alert.emailUrl) {
+        // Open the specific email
+        chrome.tabs.create({ url: alert.emailUrl });
+      } else {
+        // Fallback: open Gmail or Outlook
+        const isGmail = alert.sender && alert.sender.includes('@gmail');
+        const defaultUrl = isGmail ? 'https://mail.google.com' : 'https://outlook.office.com';
+        chrome.tabs.create({ url: defaultUrl });
+      }
+    });
+    
     const header = document.createElement('div');
     header.className = 'alert-header';
     
