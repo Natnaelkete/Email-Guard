@@ -7,12 +7,14 @@ Email Guard is a comprehensive email security extension that protects users from
 ## 🌟 Key Features
 
 ### 1. **Expected Sender & Link Domain List**
+
 - Define trusted senders (email addresses or domains)
 - Configure expected link domains for specific senders
 - Automatic alerts when unexpected senders or link domains are detected
 - Support for personal and organizational contexts
 
 ### 2. **Real-World Sender Verification**
+
 - Domain infrastructure checks (MX records, DMARC, SPF, DKIM)
 - Domain age verification
 - Impersonation and look-alike domain detection
@@ -20,35 +22,42 @@ Email Guard is a comprehensive email security extension that protects users from
 - User-facing risk explanations
 
 ### 3. **Link Domain Reconciliation + Original vs Display Mismatch + Punycode/Homograph Detection**
+
 - Detect if link text says "bank.com" but href goes to "bȧnk.com" (punycode or homograph)
 - Detect redirect chains and flag when final domain is unrelated
 - Provide "why this link is suspicious" context to the user
 
 ### 4. **Whitelist Override + User Feedback Loop**
+
 - Allow user to override/whitelist safely and record it
 - Allow user to see "why this was flagged" and optionally "report safe" so the system learns from exceptions
 - Maintain UI/UX to reduce false positives
 
 ### 5. **Privacy-First Local Analysis with Optional Backend for Advanced Checks**
+
 - Default to local heuristics/analysis (no email content sent externally) for privacy
 - Optionally integrate a backend if users want deeper checks (domain age, external verification) but allow opt-in
 - Clearly document what is processed locally vs remotely
 
 ### 6. **Shared/Organisation Mode**
+
 - For business/organisation users: allow setting a central expected-sender+link-domain list, push to users
 - Alerts sent to admin if unknown senders appear
 - Reporting dashboard: number of alerts, top flagged senders/links, etc.
 
 ### 7. **Explainable Alerts**
+
 - Every alert should say why it triggered: "Sender domain missing MX", "Link domain not in expected list", "Look-alike domain detected", etc.
-- Provide quick "What to do" guidance: "Do not click link until verifying", "Reply-To is different from From", etc.
+- Provide quick "What to do" guidance: "Do not click link until verifying", "Reply To is different from From", etc.
 
 ### 8. **Cross-Client Support**
+
 - ✅ Gmail (mail.google.com)
 - ✅ Outlook Web (outlook.live.com, outlook.office.com, outlook.office365.com)
 - Extensible architecture for additional webmail clients
 
 ### 9. **Offline/Flight Mode / No-Internet Fallback**
+
 - If internet connectivity is limited, still run basic offline heuristics (sender whitelists, link text vs href mismatch) so protection still functions
 
 ## 🚀 Installation
@@ -56,6 +65,7 @@ Email Guard is a comprehensive email security extension that protects users from
 ### From Source (Development)
 
 1. **Clone or download this repository**
+
    ```bash
    git clone <repository-url>
    cd Email-Guard
@@ -72,6 +82,7 @@ Email Guard is a comprehensive email security extension that protects users from
    - Accept to enable protection
 
 ### From Chrome Web Store (Coming Soon)
+
 - Search for "Email Guard" in the Chrome Web Store
 - Click "Add to Chrome"
 
@@ -134,17 +145,17 @@ For IT administrators deploying Email Guard across an organization:
 
 ### Alert Types
 
-| Alert Type | Severity | Description |
-|------------|----------|-------------|
-| **Unexpected Sender** | Medium | Sender not in your expected list |
-| **Reply-To Mismatch** | Medium | Reply-To address differs from sender |
-| **Suspicious Domain Pattern** | Medium | Domain has unusual characteristics |
-| **Homograph Domain** | High | Domain uses look-alike characters |
-| **Link Text Mismatch** | High | Display text doesn't match actual URL |
-| **Unexpected Link Domain** | High | Link domain not expected from sender |
-| **IP Address Link** | High | Link uses IP instead of domain |
-| **URL Shortener** | Medium | Link uses URL shortening service |
-| **Phishing Keywords** | Medium | Link contains common phishing terms |
+| Alert Type                    | Severity | Description                           |
+| ----------------------------- | -------- | ------------------------------------- |
+| **Unexpected Sender**         | Medium   | Sender not in your expected list      |
+| **Reply-To Mismatch**         | Medium   | Reply-To address differs from sender  |
+| **Suspicious Domain Pattern** | Medium   | Domain has unusual characteristics    |
+| **Homograph Domain**          | High     | Domain uses look-alike characters     |
+| **Link Text Mismatch**        | High     | Display text doesn't match actual URL |
+| **Unexpected Link Domain**    | High     | Link domain not expected from sender  |
+| **IP Address Link**           | High     | Link uses IP instead of domain        |
+| **URL Shortener**             | Medium   | Link uses URL shortening service      |
+| **Phishing Keywords**         | Medium   | Link contains common phishing terms   |
 
 ## 🔒 Privacy & Security
 
@@ -159,17 +170,20 @@ For IT administrators deploying Email Guard across an organization:
 ### What Data is Processed
 
 **Locally (Always)**:
+
 - Sender email address
 - Link URLs and display text
 - Reply-To addresses
 - Subject lines (for alert logging only)
 
 **Externally (Enhanced Mode Only)**:
+
 - Domain names for MX/DMARC/SPF verification
 - Domain age lookups
 - Reputation checks
 
 **Never Transmitted**:
+
 - Email body content
 - Attachments
 - Personal information
@@ -178,12 +192,14 @@ For IT administrators deploying Email Guard across an organization:
 ## 📊 Statistics & Reporting
 
 The extension tracks:
+
 - **Total emails scanned**: Lifetime count
 - **Threats blocked**: Number of flagged emails
 - **Last scan time**: Timestamp of most recent scan
 - **Alert history**: Detailed log of all alerts
 
 Export reports include:
+
 - Alert breakdown by type
 - Alert breakdown by severity
 - Top flagged senders
@@ -194,15 +210,15 @@ Export reports include:
 
 ### Settings
 
-| Setting | Options | Default | Description |
-|---------|---------|---------|-------------|
-| **Email Protection** | On/Off | On | Enable/disable all protection |
-| **Privacy Mode** | Local/Enhanced | Local | Processing mode |
-| **Expected Senders** | List | Empty | Trusted sender list |
-| **Expected Link Domains** | Map | Empty | Sender-to-domain mappings |
-| **Whitelisted Senders** | List | Empty | Bypass all checks |
-| **Whitelisted Domains** | List | Empty | Trusted link domains |
-| **Organization Mode** | On/Off | Off | Enable org features |
+| Setting                   | Options        | Default | Description                   |
+| ------------------------- | -------------- | ------- | ----------------------------- |
+| **Email Protection**      | On/Off         | On      | Enable/disable all protection |
+| **Privacy Mode**          | Local/Enhanced | Local   | Processing mode               |
+| **Expected Senders**      | List           | Empty   | Trusted sender list           |
+| **Expected Link Domains** | Map            | Empty   | Sender-to-domain mappings     |
+| **Whitelisted Senders**   | List           | Empty   | Bypass all checks             |
+| **Whitelisted Domains**   | List           | Empty   | Trusted link domains          |
+| **Organization Mode**     | On/Off         | Off     | Enable org features           |
 
 ## 📄 License
 
@@ -211,6 +227,7 @@ MIT License - See LICENSE file for details
 ## 🆘 Support
 
 For issues, questions, or feature requests:
+
 - Open an issue on GitHub
 - Check FAQ.md for common questions
 - See documentation files for detailed guides
